@@ -6,6 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+chrono = "0.4.30"
 curl = "0.4.44"
 rss = { version = "2.0.6", features = ["url"] }
 rusqlite = "0.29.0"

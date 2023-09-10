@@ -1,5 +1,6 @@
-use curl;
 use crate::podcast;
+use chrono::DateTime;
+use curl;
 
 pub fn init_curl() -> Result<curl::easy::Easy, curl::Error> {
     let mut handle = curl::easy::Easy::new();
@@ -28,11 +29,11 @@ pub fn parse_rss(url: &str, rss: &str) -> Result<podcast::Podcast, rss::Error> {
         channel.description().to_string(),
         url.to_string(),
     );
-    podcast.link = Some( channel.link().to_string() );
+    podcast.link = Some(channel.link().to_string());
 
     podcast.language = extract_podfield(channel.language());
-    podcast.pub_date = extract_podfield(channel.pub_date());
-    podcast.last_build_date = extract_podfield(channel.last_build_date());
+    podcast.pub_date = fix_date(channel.pub_date());
+    podcast.last_build_date = fix_date(channel.last_build_date());
     for item in channel.items() {
         podcast.episodes.push(parse_item(item));
     }
@@ -52,7 +53,7 @@ fn parse_item(item: &rss::Item) -> podcast::Episode {
         item.guid().unwrap().value().to_string(),
         item.description().unwrap().to_string(),
     );
-    episode.pub_date = extract_podfield(item.pub_date());
+    episode.pub_date = fix_date(item.pub_date());
     episode.link = extract_podfield(item.link());
     episode.enclosure = match item.enclosure() {
         Some(enc) => Some(podcast::Enclosure {
@@ -63,4 +64,14 @@ fn parse_item(item: &rss::Item) -> podcast::Episode {
         None => None,
     };
     episode
+}
+
+fn fix_date(date: Option<&str>) -> Option<String> {
+    match date {
+        Some(d) => {
+            let dt = DateTime::parse_from_rfc2822(&d).unwrap();
+            Some(dt.format("%Y-%m-%d").to_string())
+        }
+        None => None,
+    }
 }

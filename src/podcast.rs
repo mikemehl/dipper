@@ -1,5 +1,7 @@
 use std::option::Option;
 
+const NO_ID: i64 = -1;
+
 #[derive(Debug)]
 pub struct Podcast {
     pub title: String,
@@ -10,6 +12,7 @@ pub struct Podcast {
     pub pub_date: Option<String>,
     pub last_build_date: Option<String>,
     pub episodes: Vec<Episode>,
+    pub id: i64,
 }
 
 impl Podcast {
@@ -23,6 +26,7 @@ impl Podcast {
             pub_date: None,
             last_build_date: None,
             episodes: Vec::new(),
+            id: NO_ID,
         }
     }
 }
@@ -35,6 +39,7 @@ pub struct Episode {
     pub pub_date: Option<String>,
     pub link: Option<String>,
     pub enclosure: Option<Enclosure>,
+    pub id: i64,
 }
 
 impl Episode {
@@ -46,6 +51,7 @@ impl Episode {
             pub_date: None,
             link: None,
             enclosure: None,
+            id: NO_ID,
         }
     }
 }
