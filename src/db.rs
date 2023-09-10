@@ -59,11 +59,42 @@ pub fn insert_podcast(
     Ok(())
 }
 
-pub fn fetch_podcast(conn: &rusqlite::Connection, id: i64) -> Result<podcast::Podcast, rusqlite::Error> {
+pub fn fetch_all_podcasts(
+    conn: &rusqlite::Connection,
+) -> Result<Vec<podcast::Podcast>, rusqlite::Error> {
+    let mut ret = Vec::new();
+    let mut pod_stmt = conn.prepare(
+        "SELECT id, title, description, rss_url, link, language, pub_date, last_build_date
+        FROM podcasts",
+    )?;
+    let mut pods = pod_stmt.query_map(rusqlite::params![], |row| {
+        Ok(podcast::Podcast {
+            id: row.get(0)?,
+            title: row.get(1)?,
+            description: row.get(2)?,
+            rss_url: row.get(3)?,
+            link: row.get(4)?,
+            language: row.get(5)?,
+            pub_date: row.get(6)?,
+            last_build_date: row.get(7)?,
+            episodes: Vec::new(),
+        })
+    })?;
+    for pod in pods {
+        ret.push(pod?);
+    }
+    Ok(ret)
+}
+
+pub fn fetch_podcast(
+    conn: &rusqlite::Connection,
+    id: i64,
+) -> Result<podcast::Podcast, rusqlite::Error> {
     let mut pod_stmt = conn.prepare(
         "SELECT id, title, description, rss_url, link, language, pub_date, last_build_date
         FROM podcasts
-        WHERE id = ?1")?;
+        WHERE id = ?1",
+    )?;
     let pod = pod_stmt.query_row(rusqlite::params![id], |row| {
         Ok(podcast::Podcast {
             id: row.get(0)?,
@@ -80,32 +111,37 @@ pub fn fetch_podcast(conn: &rusqlite::Connection, id: i64) -> Result<podcast::Po
     Ok(pod)
 }
 
-pub fn fetch_podcast_and_episodes(conn: &rusqlite::Connection, id: i64) -> Result<podcast::Podcast, rusqlite::Error> {
+pub fn fetch_podcast_and_episodes(
+    conn: &rusqlite::Connection,
+    id: i64,
+) -> Result<podcast::Podcast, rusqlite::Error> {
     let mut pod = fetch_podcast(conn, id)?;
     let mut ep_stmt = conn.prepare(
         "SELECT id, title, guid, description, pub_date, link, enclosure_url, enclosure_length, enclosure_mime_type
         FROM episodes
         WHERE podcast_id = ?1")?;
-    ep_stmt.query_map(rusqlite::params![id], |row| {
-        Ok(podcast::Episode {
-            id: row.get(0)?,
-            title: row.get(1)?,
-            guid: row.get(2)?,
-            description: row.get(3)?,
-            pub_date: row.get(4)?,
-            link: row.get(5)?,
-            enclosure: match row.get(6)? {
-                Some(url) => Some(podcast::Enclosure {
-                    url,
-                    length: row.get(7)?,
-                    mime_type: row.get(8)?,
-                }),
-                None => None,
-            },
-        })
-    })?.for_each(|ep| {
-        pod.episodes.push(ep.unwrap());
-    });
+    ep_stmt
+        .query_map(rusqlite::params![id], |row| {
+            Ok(podcast::Episode {
+                id: row.get(0)?,
+                title: row.get(1)?,
+                guid: row.get(2)?,
+                description: row.get(3)?,
+                pub_date: row.get(4)?,
+                link: row.get(5)?,
+                enclosure: match row.get(6)? {
+                    Some(url) => Some(podcast::Enclosure {
+                        url,
+                        length: row.get(7)?,
+                        mime_type: row.get(8)?,
+                    }),
+                    None => None,
+                },
+            })
+        })?
+        .for_each(|ep| {
+            pod.episodes.push(ep.unwrap());
+        });
     Ok(pod)
 }
 
