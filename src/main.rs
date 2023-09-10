@@ -16,4 +16,5 @@ fn main() {
     let pod2 = db::fetch_podcast_and_episodes(&testdb, 1).unwrap();
     println!("{:?}", pod2);
     assert_eq!(pod.episodes.len(), pod2.episodes.len());
+    println!("Hello, world!");
 }
