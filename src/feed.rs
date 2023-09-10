@@ -40,6 +40,24 @@ pub fn parse_rss(url: &str, rss: &str) -> Result<podcast::Podcast, rss::Error> {
     Ok(podcast)
 }
 
+pub fn fetch_enclosure(
+    handle: &mut curl::easy::Easy,
+    enclosure: &podcast::Enclosure,
+) -> Result<Vec<u8>, curl::Error> {
+    !unimplemented!();
+    // let mut buf = Vec::new();
+    // handle.url(&enclosure.url)?;
+    // {
+    //     let mut transfer = handle.transfer();
+    //     transfer.write_function(|data| {
+    //         buf.extend_from_slice(data);
+    //         Ok(data.len())
+    //     })?;
+    //     transfer.perform()?;
+    // }
+    // Ok(buf)
+}
+
 fn extract_podfield(field: Option<&str>) -> Option<String> {
     match field {
         Some(s) => Some(s.to_string()),

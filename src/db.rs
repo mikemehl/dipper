@@ -117,6 +117,36 @@ pub fn fetch_episodes(conn: &rusqlite::Connection, id: i64) -> Result<Vec<podcas
     Ok(ret)
 }
 
+pub fn fetch_episode(
+    conn: &rusqlite::Connection,
+    id: i64,
+) -> Result<podcast::Episode, rusqlite::Error> {
+    let mut ep_stmt = conn.prepare(
+        "SELECT id, title, guid, description, pub_date, link, enclosure_url, enclosure_length, enclosure_mime_type
+        FROM episodes
+        WHERE id = ?1",
+    )?;
+    let ep = ep_stmt.query_row(rusqlite::params![id], |row| {
+        Ok(podcast::Episode {
+            id: row.get(0)?,
+            title: row.get(1)?,
+            guid: row.get(2)?,
+            description: row.get(3)?,
+            pub_date: row.get(4)?,
+            link: row.get(5)?,
+            enclosure: match row.get(6)? {
+                Some(url) => Some(podcast::Enclosure {
+                    url,
+                    length: row.get(7)?,
+                    mime_type: row.get(8)?,
+                }),
+                None => None,
+            },
+        })
+    })?;
+    Ok(ep)
+}
+
 pub fn fetch_podcast(
     conn: &rusqlite::Connection,
     id: i64,
@@ -176,7 +206,7 @@ pub fn fetch_podcast_and_episodes(
     Ok(pod)
 }
 
-fn insert_episode(
+pub fn insert_episode(
     conn: &rusqlite::Connection,
     episode: &podcast::Episode,
     podcast_id: i64,
@@ -195,6 +225,20 @@ fn insert_episode(
             episode.enclosure.as_ref().map(|e| &e.length),
             episode.enclosure.as_ref().map(|e| &e.mime_type),
         ],
+    )?;
+    Ok(())
+}
+
+pub fn remove_podcast(conn: &rusqlite::Connection, id: i64) -> Result<(), rusqlite::Error> {
+    conn.execute(
+        "DELETE FROM podcasts
+        WHERE id = ?1",
+        rusqlite::params![id],
+    )?;
+    conn.execute(
+        "DELETE FROM episodes
+        WHERE podcast_id = ?1",
+        rusqlite::params![id],
     )?;
     Ok(())
 }

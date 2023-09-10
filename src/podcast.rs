@@ -29,6 +29,22 @@ impl Podcast {
             id: NO_ID,
         }
     }
+
+    pub fn print(&self, detailed: bool) {
+        if detailed {
+            self.print_detailed();
+        } else {
+            self.print_summary();
+        }
+    }
+
+    fn print_summary(&self) {
+        println!("{} => {}", self.id, self.title);
+    }
+
+    fn print_detailed(&self) {
+        println!("{:?}", self);
+    }
 }
 
 #[derive(Debug)]
@@ -53,6 +69,22 @@ impl Episode {
             enclosure: None,
             id: NO_ID,
         }
+    }
+
+    pub fn print(&self, detailed: bool) {
+        if detailed {
+            self.print_detailed();
+        } else {
+            self.print_summary();
+        }
+    }
+
+    fn print_summary(&self) {
+        println!("{} => {}", self.id, self.title);
+    }
+
+    fn print_detailed(&self) {
+        println!("{:?}", self);
     }
 }
 

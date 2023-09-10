@@ -4,6 +4,11 @@ mod podcast;
 mod cli;
 
 fn main() {
+    cli::parse_args();
+}
+
+#[allow(dead_code)]
+fn test() {
     println!("Hello, world!");
     let testdb = db::init_db("test.db".to_string()).unwrap();
     let mut curl_handle = feed::init_curl().unwrap();
