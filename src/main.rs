@@ -1,6 +1,7 @@
 mod db;
 mod feed;
 mod podcast;
+mod cli;
 
 fn main() {
     println!("Hello, world!");
@@ -12,4 +13,7 @@ fn main() {
     println!("{}", test_rss);
     println!("{:?}", pod);
     let _ = db::insert_podcast(&testdb, &mut pod);
+    let pod2 = db::fetch_podcast_and_episodes(&testdb, 1).unwrap();
+    println!("{:?}", pod2);
+    assert_eq!(pod.episodes.len(), pod2.episodes.len());
 }
