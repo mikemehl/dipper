@@ -242,3 +242,64 @@ pub fn remove_podcast(conn: &rusqlite::Connection, id: i64) -> Result<(), rusqli
     )?;
     Ok(())
 }
+
+pub fn search_podcasts(conn: &rusqlite::Connection, term: String) -> Result<Vec<podcast::Podcast>, rusqlite::Error> {
+    let mut search_query = conn.prepare(
+        "SELECT id, title, description, rss_url, link, language, pub_date, last_build_date
+        FROM podcasts
+        WHERE title LIKE ?1 OR description LIKE ?1")?;
+    let mut ret = Vec::new();
+    let pods = search_query.query_map(rusqlite::params!["%".to_string() + &term + "%"], |row| {
+        Ok(podcast::Podcast {
+            id: row.get(0)?,
+            title: row.get(1)?,
+            description: row.get(2)?,
+            rss_url: row.get(3)?,
+            link: row.get(4)?,
+            language: row.get(5)?,
+            pub_date: row.get(6)?,
+            last_build_date: row.get(7)?,
+            episodes: Vec::new(),
+        })
+    })?;
+    for pod in pods {
+        ret.push(pod?);
+    }
+    Ok(ret)
+}
+
+pub  fn search_episodes(conn: &rusqlite::Connection, term: String, arg: i64) -> Result<Vec<podcast::Episode>, rusqlite::Error> {
+    let query_string = match arg {
+        0 => "SELECT id, title, guid, description, pub_date, link, enclosure_url, enclosure_length, enclosure_mime_type
+        FROM episodes
+        WHERE title LIKE ?1 OR description LIKE ?1",
+        _ => "SELECT id, title, guid, description, pub_date, link, enclosure_url, enclosure_length, enclosure_mime_type
+        FROM episodes
+        WHERE title LIKE ?1 OR description LIKE ?1 OR podcast_id = ?2",
+    };
+    let params = rusqlite::params!["%".to_string() + &term + "%", arg];
+    let mut search_query = conn.prepare(query_string)?;
+    let mut ret = Vec::new();
+    let eps = search_query.query_map(params, |row| {
+        Ok(podcast::Episode {
+            id: row.get(0)?,
+            title: row.get(1)?,
+            guid: row.get(2)?,
+            description: row.get(3)?,
+            pub_date: row.get(4)?,
+            link: row.get(5)?,
+            enclosure: match row.get(6)? {
+                Some(url) => Some(podcast::Enclosure {
+                    url,
+                    length: row.get(7)?,
+                    mime_type: row.get(8)?,
+                }),
+                None => None,
+            },
+        })
+    })?;
+    for ep in eps {
+        ret.push(ep?);
+    }
+    Ok(ret)
+}

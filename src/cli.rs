@@ -65,6 +65,22 @@ enum Commands {
         // The id of the episode to download.
         id: i64,
     },
+    Search {
+        // Detailed output.
+        #[arg(short, long)]
+        detailed: bool,
+
+        // Search episodes.
+        #[arg(short, long)]
+        episodes: bool,
+
+        // Podcast id to search within.
+        #[arg(short, long)]
+        id: Option<i64>,
+        
+        // The search term.
+        term: String,
+    },
 }
 
 pub fn parse_args() {
@@ -85,6 +101,7 @@ pub fn parse_args() {
         Commands::Update { id } => do_update(db_name, id),
         Commands::Remove { id } => do_remove(db_name, id),
         Commands::Download { id } => do_download(db_name, id),
+        Commands::Search { term, detailed, episodes, id } => do_search(db_name, term, detailed, episodes, id),
     }
 }
 
@@ -181,4 +198,28 @@ fn do_download(db_name: String, id: i64) {
     let data = feed::fetch_enclosure(&enclosure).unwrap();
     let fname = slug::slugify(ep.title) + ".mp3";
     std::fs::write(fname, data).unwrap();
+}
+
+fn do_search(db_name: String, term: String, detailed: bool, episodes: bool, id: Option<i64>) {
+    let conn = db::init_db(db_name).unwrap();
+    match (episodes, id) {
+        (true, Some(id)) => {
+            let eps = db::search_episodes(&conn, term, id).unwrap();
+            for ep in eps {
+                ep.print(detailed);
+            }
+        }
+        (true, None) => {
+            let eps = db::search_episodes(&conn, term, 0).unwrap();
+            for ep in eps {
+                ep.print(detailed);
+            }
+        }
+        _ => {
+            let pods = db::search_podcasts(&conn, term).unwrap();
+            for pod in pods {
+                pod.print(detailed);
+            }
+        }
+    }
 }
