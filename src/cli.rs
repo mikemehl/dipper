@@ -182,7 +182,7 @@ fn do_download(db_name: String, id: i64) {
     let ep = db::fetch_episode(&conn, id).unwrap();
     let enclosure = ep.enclosure.unwrap();
     let mut curl_handle = feed::init_curl().unwrap();
-    let data = feed::fetch_enclosure(&mut curl_handle, &enclosure).unwrap();
+    let data = feed::fetch_enclosure(&enclosure).unwrap();
     let fname = slug::slugify(ep.title) + ".mp3";
     std::fs::write(fname, data).unwrap();
 }

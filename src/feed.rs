@@ -1,6 +1,8 @@
 use crate::podcast;
 use chrono::DateTime;
 use curl;
+use reqwest;
+use bytes::Bytes;
 
 pub fn init_curl() -> Result<curl::easy::Easy, curl::Error> {
     let mut handle = curl::easy::Easy::new();
@@ -40,22 +42,8 @@ pub fn parse_rss(url: &str, rss: &str) -> Result<podcast::Podcast, rss::Error> {
     Ok(podcast)
 }
 
-pub fn fetch_enclosure(
-    handle: &mut curl::easy::Easy,
-    enclosure: &podcast::Enclosure,
-) -> Result<Vec<u8>, curl::Error> {
-    !unimplemented!();
-    // let mut buf = Vec::new();
-    // handle.url(&enclosure.url)?;
-    // {
-    //     let mut transfer = handle.transfer();
-    //     transfer.write_function(|data| {
-    //         buf.extend_from_slice(data);
-    //         Ok(data.len())
-    //     })?;
-    //     transfer.perform()?;
-    // }
-    // Ok(buf)
+pub fn fetch_enclosure( enclosure: &podcast::Enclosure,) -> reqwest::Result<Bytes> {
+    reqwest::blocking::get(&enclosure.url)?.bytes()
 }
 
 fn extract_podfield(field: Option<&str>) -> Option<String> {
