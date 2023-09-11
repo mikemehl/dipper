@@ -112,8 +112,7 @@ fn do_list(db_name: String, id: Option<i64>, detailed: bool, limit: Option<i64>)
 
 fn do_add(db_name: String, url: String) {
     let conn = db::init_db(db_name).unwrap();
-    let mut curl_handle = feed::init_curl().unwrap();
-    let rss = feed::fetch_rss(&mut curl_handle, &url).unwrap();
+    let rss = feed::fetch_rss(&url).unwrap();
     let mut pod = feed::parse_rss(&url, &rss).unwrap();
     db::insert_podcast(&conn, &mut pod).unwrap();
     println!("Added podcast {}.", pod.title);
@@ -140,9 +139,8 @@ fn do_update(db_name: String, id: Option<i64>) {
     let conn = db::init_db(db_name).unwrap();
     match id {
         Some(id) => {
-            let mut curl_handle = feed::init_curl().unwrap();
             let pod = db::fetch_podcast(&conn, id).unwrap();
-            let rss = feed::fetch_rss(&mut curl_handle, &pod.rss_url).unwrap();
+            let rss = feed::fetch_rss(&pod.rss_url).unwrap();
             let pod = feed::parse_rss(&pod.rss_url, &rss).unwrap();
             for ep in pod.episodes {
                 db::insert_episode(&conn, &ep, id).unwrap();
@@ -150,10 +148,9 @@ fn do_update(db_name: String, id: Option<i64>) {
             println!("Updated {}.", pod.title);
         }
         None => {
-            let mut curl_handle = feed::init_curl().unwrap();
             let pods = db::fetch_all_podcasts(&conn).unwrap();
             for mut pod in pods {
-                let rss = feed::fetch_rss(&mut curl_handle, &pod.rss_url).unwrap();
+                let rss = feed::fetch_rss(&pod.rss_url).unwrap();
                 pod = feed::parse_rss(&pod.rss_url, &rss).unwrap();
                 for ep in pod.episodes {
                     db::insert_episode(&conn, &ep, pod.id).unwrap();
@@ -181,7 +178,6 @@ fn do_download(db_name: String, id: i64) {
     let conn = db::init_db(db_name).unwrap();
     let ep = db::fetch_episode(&conn, id).unwrap();
     let enclosure = ep.enclosure.unwrap();
-    let mut curl_handle = feed::init_curl().unwrap();
     let data = feed::fetch_enclosure(&enclosure).unwrap();
     let fname = slug::slugify(ep.title) + ".mp3";
     std::fs::write(fname, data).unwrap();

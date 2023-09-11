@@ -1,27 +1,10 @@
 use crate::podcast;
 use chrono::DateTime;
-use curl;
 use reqwest;
 use bytes::Bytes;
 
-pub fn init_curl() -> Result<curl::easy::Easy, curl::Error> {
-    let mut handle = curl::easy::Easy::new();
-    handle.useragent("dipper/0.1.0")?;
-    Ok(handle)
-}
-
-pub fn fetch_rss(handle: &mut curl::easy::Easy, url: &str) -> Result<String, curl::Error> {
-    let mut buf = Vec::new();
-    handle.url(url)?;
-    {
-        let mut transfer = handle.transfer();
-        transfer.write_function(|data| {
-            buf.extend_from_slice(data);
-            Ok(data.len())
-        })?;
-        transfer.perform()?;
-    }
-    Ok(String::from_utf8(buf).unwrap())
+pub fn fetch_rss(url: &str) -> reqwest::Result<String> {
+    reqwest::blocking::get(url)?.text()
 }
 
 pub fn parse_rss(url: &str, rss: &str) -> Result<podcast::Podcast, rss::Error> {
