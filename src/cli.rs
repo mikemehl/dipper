@@ -1,7 +1,6 @@
 use crate::db;
 use crate::feed;
 use clap::{Parser, Subcommand};
-use slug;
 
 const DEFAULT_DB_NAME: &str = "test.db";
 

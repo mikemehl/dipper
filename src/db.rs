@@ -1,5 +1,4 @@
 use crate::podcast;
-use rusqlite;
 
 pub fn init_db(dbfname: String) -> Result<rusqlite::Connection, rusqlite::Error> {
     let conn = rusqlite::Connection::open(dbfname)?;
@@ -67,7 +66,7 @@ pub fn fetch_all_podcasts(
         "SELECT id, title, description, rss_url, link, language, pub_date, last_build_date
         FROM podcasts",
     )?;
-    let mut pods = pod_stmt.query_map(rusqlite::params![], |row| {
+    let pods = pod_stmt.query_map(rusqlite::params![], |row| {
         Ok(podcast::Podcast {
             id: row.get(0)?,
             title: row.get(1)?,

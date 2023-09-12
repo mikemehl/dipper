@@ -1,7 +1,6 @@
 use crate::podcast;
-use chrono::DateTime;
-use reqwest;
 use bytes::Bytes;
+use chrono::DateTime;
 
 pub fn fetch_rss(url: &str) -> reqwest::Result<String> {
     reqwest::blocking::get(url)?.text()
@@ -25,15 +24,12 @@ pub fn parse_rss(url: &str, rss: &str) -> Result<podcast::Podcast, rss::Error> {
     Ok(podcast)
 }
 
-pub fn fetch_enclosure( enclosure: &podcast::Enclosure,) -> reqwest::Result<Bytes> {
+pub fn fetch_enclosure(enclosure: &podcast::Enclosure) -> reqwest::Result<Bytes> {
     reqwest::blocking::get(&enclosure.url)?.bytes()
 }
 
 fn extract_podfield(field: Option<&str>) -> Option<String> {
-    match field {
-        Some(s) => Some(s.to_string()),
-        None => None,
-    }
+    field.map(|s| s.to_string())
 }
 
 fn parse_item(item: &rss::Item) -> podcast::Episode {
@@ -44,21 +40,18 @@ fn parse_item(item: &rss::Item) -> podcast::Episode {
     );
     episode.pub_date = fix_date(item.pub_date());
     episode.link = extract_podfield(item.link());
-    episode.enclosure = match item.enclosure() {
-        Some(enc) => Some(podcast::Enclosure {
-            url: enc.url().to_string(),
-            length: Some(enc.length().to_string()),
-            mime_type: Some(enc.mime_type().to_string()),
-        }),
-        None => None,
-    };
+    episode.enclosure = item.enclosure().map(|enc| podcast::Enclosure {
+        url: enc.url().to_string(),
+        length: Some(enc.length().to_string()),
+        mime_type: Some(enc.mime_type().to_string()),
+    });
     episode
 }
 
 fn fix_date(date: Option<&str>) -> Option<String> {
     match date {
         Some(d) => {
-            let dt = DateTime::parse_from_rfc2822(&d).unwrap();
+            let dt = DateTime::parse_from_rfc2822(d).unwrap();
             Some(dt.format("%Y-%m-%d").to_string())
         }
         None => None,
