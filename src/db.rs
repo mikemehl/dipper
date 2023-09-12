@@ -1,6 +1,6 @@
 use crate::podcast;
 
-pub fn init_db(dbfname: String) -> Result<rusqlite::Connection, rusqlite::Error> {
+pub fn init_db(dbfname: &String) -> Result<rusqlite::Connection, rusqlite::Error> {
     let conn = rusqlite::Connection::open(dbfname)?;
     conn.execute(
         "CREATE TABLE IF NOT EXISTS podcasts (

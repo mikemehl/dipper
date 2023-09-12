@@ -19,7 +19,9 @@ pub fn parse_rss(url: &str, rss: &str) -> Result<podcast::Podcast, rss::Error> {
     podcast.pub_date = fix_date(channel.pub_date());
     podcast.last_build_date = fix_date(channel.last_build_date());
     for item in channel.items() {
-        podcast.episodes.push(parse_item(item));
+        if let Ok(item) = parse_item(item) {
+            podcast.episodes.push(item);
+        }
     }
     Ok(podcast)
 }
@@ -32,11 +34,20 @@ fn extract_podfield(field: Option<&str>) -> Option<String> {
     field.map(|s| s.to_string())
 }
 
-fn parse_item(item: &rss::Item) -> podcast::Episode {
+fn parse_item(item: &rss::Item) -> Result<podcast::Episode, ()> {
+    if item.guid().is_none() {
+        return Err(());
+    }
+    if item.title().is_none() {
+        return Err(());
+    }
+    if item.description().is_none() {
+        return Err(());
+    }
     let mut episode = podcast::Episode::new(
         item.title().unwrap().to_string(),
         item.guid().unwrap().value().to_string(),
-        item.description().unwrap().to_string(),
+        item.description().unwrap_or_default().to_string(),
     );
     episode.pub_date = fix_date(item.pub_date());
     episode.link = extract_podfield(item.link());
@@ -45,7 +56,7 @@ fn parse_item(item: &rss::Item) -> podcast::Episode {
         length: Some(enc.length().to_string()),
         mime_type: Some(enc.mime_type().to_string()),
     });
-    episode
+    Ok(episode)
 }
 
 fn fix_date(date: Option<&str>) -> Option<String> {

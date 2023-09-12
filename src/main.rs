@@ -1,7 +1,7 @@
+mod cli;
 mod db;
 mod feed;
 mod podcast;
-mod cli;
 
 fn main() {
     cli::parse_args();
@@ -10,9 +10,8 @@ fn main() {
 #[allow(dead_code)]
 fn test() {
     println!("Hello, world!");
-    let testdb = db::init_db("test.db".to_string()).unwrap();
-    let test_rss: String =
-        feed::fetch_rss("https://www.pipes.digital/feed/7N3mlbqy").unwrap();
+    let testdb = db::init_db(&"test.db".to_string()).unwrap();
+    let test_rss: String = feed::fetch_rss("https://www.pipes.digital/feed/7N3mlbqy").unwrap();
     let mut pod = feed::parse_rss("https://www.pipes.digital/feed/7N3mlbqy", &test_rss).unwrap();
     println!("{}", test_rss);
     println!("{:?}", pod);

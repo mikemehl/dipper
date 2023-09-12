@@ -1,6 +1,7 @@
 use crate::db;
 use crate::feed;
 use clap::{Parser, Subcommand};
+use opml::OPML;
 
 const DEFAULT_DB_NAME: &str = "test.db";
 
@@ -80,6 +81,9 @@ enum Commands {
         // The search term.
         term: String,
     },
+    Import {
+        file: String,
+    },
 }
 
 pub fn parse_args() {
@@ -106,11 +110,12 @@ pub fn parse_args() {
             episodes,
             id,
         } => do_search(db_name, term, detailed, episodes, id),
+        Commands::Import { file } => do_import(db_name, file),
     }
 }
 
 fn do_list(db_name: String, id: Option<i64>, detailed: bool, limit: Option<i64>) {
-    let conn = db::init_db(db_name).unwrap();
+    let conn = db::init_db(&db_name).unwrap();
     if let Some(id) = id {
         let pod = db::fetch_podcast_and_episodes(&conn, id).unwrap();
         pod.print(detailed);
@@ -132,15 +137,24 @@ fn do_list(db_name: String, id: Option<i64>, detailed: bool, limit: Option<i64>)
 }
 
 fn do_add(db_name: String, url: String) {
-    let conn = db::init_db(db_name).unwrap();
-    let rss = feed::fetch_rss(&url).unwrap();
-    let mut pod = feed::parse_rss(&url, &rss).unwrap();
-    db::insert_podcast(&conn, &mut pod).unwrap();
-    println!("Added podcast {}.", pod.title);
+    let conn = db::init_db(&db_name).unwrap();
+    let rss = feed::fetch_rss(&url);
+    if rss.is_err() {
+        println!("Error fetching RSS feed: {}.", url);
+        return;
+    }
+    let rss = rss.unwrap();
+    let pod = feed::parse_rss(&url, &rss);
+    if let Ok(mut pod) = pod {
+        db::insert_podcast(&conn, &mut pod).unwrap();
+        println!("Added {}.", pod.title);
+    } else {
+        println!("Error parsing RSS feed: {}.", url);
+    }
 }
 
 fn do_episodes(db_name: String, id: i64, detailed: bool, limit: Option<i64>) {
-    let conn = db::init_db(db_name).unwrap();
+    let conn = db::init_db(&db_name).unwrap();
     let pod = db::fetch_podcast_and_episodes(&conn, id).unwrap();
     match limit {
         Some(limit) => {
@@ -157,7 +171,7 @@ fn do_episodes(db_name: String, id: i64, detailed: bool, limit: Option<i64>) {
 }
 
 fn do_update(db_name: String, id: Option<i64>) {
-    let conn = db::init_db(db_name).unwrap();
+    let conn = db::init_db(&db_name).unwrap();
     match id {
         Some(id) => {
             let pod = db::fetch_podcast(&conn, id).unwrap();
@@ -183,7 +197,7 @@ fn do_update(db_name: String, id: Option<i64>) {
 }
 
 fn do_remove(db_name: String, id: i64) {
-    let conn = db::init_db(db_name).unwrap();
+    let conn = db::init_db(&db_name).unwrap();
     match db::fetch_podcast(&conn, id) {
         Ok(pod) => {
             db::remove_podcast(&conn, id).unwrap();
@@ -196,7 +210,7 @@ fn do_remove(db_name: String, id: i64) {
 }
 
 fn do_download(db_name: String, id: i64) {
-    let conn = db::init_db(db_name).unwrap();
+    let conn = db::init_db(&db_name).unwrap();
     let ep = db::fetch_episode(&conn, id).unwrap();
     let enclosure = ep.enclosure.unwrap();
     let data = feed::fetch_enclosure(&enclosure).unwrap();
@@ -205,7 +219,7 @@ fn do_download(db_name: String, id: i64) {
 }
 
 fn do_search(db_name: String, term: String, detailed: bool, episodes: bool, id: Option<i64>) {
-    let conn = db::init_db(db_name).unwrap();
+    let conn = db::init_db(&db_name).unwrap();
     match (episodes, id) {
         (true, Some(id)) => {
             let eps = db::search_episodes(&conn, term, id).unwrap();
@@ -226,4 +240,14 @@ fn do_search(db_name: String, term: String, detailed: bool, episodes: bool, id: 
             }
         }
     }
+}
+
+fn do_import(db_name: String, file: String) {
+    let contents = std::fs::read_to_string(file).unwrap();
+    let opml = OPML::from_str(&contents).unwrap();
+    opml.body.outlines.iter().for_each(|o| {
+        if let Some(ref url) = o.xml_url {
+            do_add(db_name.clone(), url.clone())
+        }
+    });
 }

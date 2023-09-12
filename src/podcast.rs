@@ -94,13 +94,3 @@ pub struct Enclosure {
     pub length: Option<String>,
     pub mime_type: Option<String>,
 }
-
-impl Enclosure {
-    pub fn new(url: String) -> Enclosure {
-        Enclosure {
-            url,
-            length: None,
-            mime_type: None,
-        }
-    }
-}
