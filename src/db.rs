@@ -86,7 +86,10 @@ pub fn fetch_all_podcasts(
     Ok(ret)
 }
 
-pub fn fetch_episodes(conn: &rusqlite::Connection, id: i64) -> Result<Vec<podcast::Episode>, rusqlite::Error>{
+pub fn fetch_episodes(
+    conn: &rusqlite::Connection,
+    id: i64,
+) -> Result<Vec<podcast::Episode>, rusqlite::Error> {
     let mut ret = Vec::new();
     let mut ep_stmt = conn.prepare(
         "SELECT id, title, guid, description, pub_date, link, enclosure_url, enclosure_length, enclosure_mime_type
@@ -243,11 +246,15 @@ pub fn remove_podcast(conn: &rusqlite::Connection, id: i64) -> Result<(), rusqli
     Ok(())
 }
 
-pub fn search_podcasts(conn: &rusqlite::Connection, term: String) -> Result<Vec<podcast::Podcast>, rusqlite::Error> {
+pub fn search_podcasts(
+    conn: &rusqlite::Connection,
+    term: String,
+) -> Result<Vec<podcast::Podcast>, rusqlite::Error> {
     let mut search_query = conn.prepare(
         "SELECT id, title, description, rss_url, link, language, pub_date, last_build_date
         FROM podcasts
-        WHERE title LIKE ?1 OR description LIKE ?1")?;
+        WHERE title LIKE ?1 OR description LIKE ?1",
+    )?;
     let mut ret = Vec::new();
     let pods = search_query.query_map(rusqlite::params!["%".to_string() + &term + "%"], |row| {
         Ok(podcast::Podcast {
@@ -268,16 +275,25 @@ pub fn search_podcasts(conn: &rusqlite::Connection, term: String) -> Result<Vec<
     Ok(ret)
 }
 
-pub  fn search_episodes(conn: &rusqlite::Connection, term: String, arg: i64) -> Result<Vec<podcast::Episode>, rusqlite::Error> {
-    let query_string = match arg {
-        0 => "SELECT id, title, guid, description, pub_date, link, enclosure_url, enclosure_length, enclosure_mime_type
+pub fn search_episodes(
+    conn: &rusqlite::Connection,
+    term: String,
+    id: i64,
+) -> Result<Vec<podcast::Episode>, rusqlite::Error> {
+    match id {
+        0 => search_episodes_any(conn, term),
+        _ => search_episodes_of_podcast(conn, term, id),
+    }
+}
+
+pub fn search_episodes_any(
+    conn: &rusqlite::Connection,
+    term: String,
+) -> Result<Vec<podcast::Episode>, rusqlite::Error> {
+    let query_string = "SELECT id, title, guid, description, pub_date, link, enclosure_url, enclosure_length, enclosure_mime_type
         FROM episodes
-        WHERE title LIKE ?1 OR description LIKE ?1",
-        _ => "SELECT id, title, guid, description, pub_date, link, enclosure_url, enclosure_length, enclosure_mime_type
-        FROM episodes
-        WHERE title LIKE ?1 OR description LIKE ?1 OR podcast_id = ?2",
-    };
-    let params = rusqlite::params!["%".to_string() + &term + "%", arg];
+        WHERE title LIKE ?1 OR description LIKE ?1";
+    let params = rusqlite::params!["%".to_string() + &term + "%"];
     let mut search_query = conn.prepare(query_string)?;
     let mut ret = Vec::new();
     let eps = search_query.query_map(params, |row| {
@@ -298,6 +314,44 @@ pub  fn search_episodes(conn: &rusqlite::Connection, term: String, arg: i64) -> 
             },
         })
     })?;
+    for ep in eps {
+        ret.push(ep?);
+    }
+    Ok(ret)
+}
+
+pub fn search_episodes_of_podcast(
+    conn: &rusqlite::Connection,
+    term: String,
+    id: i64,
+) -> Result<Vec<podcast::Episode>, rusqlite::Error> {
+    let mut search_query = conn.prepare(
+        "SELECT id, title, guid, description, pub_date, link, enclosure_url, enclosure_length, enclosure_mime_type
+        FROM episodes
+        WHERE (title LIKE ?1 OR description LIKE ?1) AND podcast_id = ?2",
+    )?;
+    let mut ret = Vec::new();
+    let eps = search_query.query_map(
+        rusqlite::params!["%".to_string() + &term + "%", id],
+        |row| {
+            Ok(podcast::Episode {
+                id: row.get(0)?,
+                title: row.get(1)?,
+                guid: row.get(2)?,
+                description: row.get(3)?,
+                pub_date: row.get(4)?,
+                link: row.get(5)?,
+                enclosure: match row.get(6)? {
+                    Some(url) => Some(podcast::Enclosure {
+                        url,
+                        length: row.get(7)?,
+                        mime_type: row.get(8)?,
+                    }),
+                    None => None,
+                },
+            })
+        },
+    )?;
     for ep in eps {
         ret.push(ep?);
     }

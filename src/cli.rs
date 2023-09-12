@@ -1,7 +1,7 @@
 use crate::db;
 use crate::feed;
-use slug;
 use clap::{Parser, Subcommand};
+use slug;
 
 const DEFAULT_DB_NAME: &str = "test.db";
 
@@ -77,7 +77,7 @@ enum Commands {
         // Podcast id to search within.
         #[arg(short, long)]
         id: Option<i64>,
-        
+
         // The search term.
         term: String,
     },
@@ -101,7 +101,12 @@ pub fn parse_args() {
         Commands::Update { id } => do_update(db_name, id),
         Commands::Remove { id } => do_remove(db_name, id),
         Commands::Download { id } => do_download(db_name, id),
-        Commands::Search { term, detailed, episodes, id } => do_search(db_name, term, detailed, episodes, id),
+        Commands::Search {
+            term,
+            detailed,
+            episodes,
+            id,
+        } => do_search(db_name, term, detailed, episodes, id),
     }
 }
 
