@@ -2,7 +2,6 @@ use crate::{db, podcast};
 use crossterm::{event, execute, terminal};
 use ratatui::{prelude::*, widgets};
 use std::io;
-use std::time::Duration;
 
 enum Page {
     Main { pods: Vec<podcast::Podcast> },
@@ -19,11 +18,9 @@ pub fn start() -> Result<(), io::Error> {
 
     loop {
         terminal.draw(render_main_page)?;
-        if event::poll(Duration::from_millis(100)).unwrap() {
-            if let event::Event::Key(key) = event::read().unwrap() {
-                if let event::KeyCode::Char('q') = key.code {
-                    break;
-                }
+        if let event::Event::Key(key) = event::read().unwrap() {
+            if let event::KeyCode::Char('q') = key.code {
+                break;
             }
         }
     }
@@ -46,6 +43,7 @@ fn render_title_widget(f: &mut Frame<CrosstermBackend<io::Stdout>>, rect: Rect) 
         .title_style(Style::default().yellow())
         .borders(widgets::Borders::TOP)
         .border_type(widgets::BorderType::Double);
+
     f.render_widget(title, rect);
 }
 
@@ -58,11 +56,14 @@ fn render_podcasts_widget(
     for pod in pods {
         items.push(widgets::ListItem::new(pod.title.clone()));
     }
-    let pods = widgets::List::new(items).block(
-        widgets::Block::default()
-            .borders(widgets::Borders::TOP)
-            .title("Podcasts"),
-    );
+    let pods = widgets::List::new(items)
+        .bg(Color::Black)
+        .fg(Color::Cyan)
+        .block(
+            widgets::Block::default()
+                .borders(widgets::Borders::TOP)
+                .title("Podcasts"),
+        );
     f.render_widget(pods, rect);
 }
 
