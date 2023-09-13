@@ -1,19 +1,7 @@
-local overseer = require('overseer')
-local build_task = overseer.new_task({
-  cmd = { 'cargo' },
-  args = { 'build' },
-  components = {
-    { 'restart_on_save', delay = 500, interrupt = true },
-    { 'unique' },
-    'default'
-  }
-})
+local harpoon_tmux = require("harpoon.tmux")
+local function run_tui()
+	harpoon_tmux.sendCommand(1, "cargo run tui")
+	harpoon_tmux.gotoTerminal(1)
+end
 
-local run_task = overseer.new_task({
-  cmd = { 'cargo' },
-  args = { 'run' },
-  components = {
-    { 'unique' },
-    'default'
-  }
-})
+vim.keymap.set("n", "<leader>r", run_tui, { noremap = true, silent = true })
