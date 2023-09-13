@@ -84,6 +84,9 @@ enum Commands {
     Import {
         file: String,
     },
+    Export {
+        file: String,
+    },
 }
 
 pub fn parse_args() {
@@ -111,6 +114,7 @@ pub fn parse_args() {
             id,
         } => do_search(db_name, term, detailed, episodes, id),
         Commands::Import { file } => do_import(db_name, file),
+        Commands::Export { file } => do_export(db_name, file),
     }
 }
 
@@ -250,4 +254,27 @@ fn do_import(db_name: String, file: String) {
             do_add(db_name.clone(), url.clone())
         }
     });
+}
+
+fn do_export(db_name: String, file: String) {
+    let conn = db::init_db(&db_name).unwrap();
+    let pods = db::fetch_all_podcasts(&conn).unwrap();
+    let opml = OPML {
+        version: "2.0".to_string(),
+        head: None,
+        body: opml::Body {
+            outlines: pods
+                .iter()
+                .map(|p| opml::Outline {
+                    text: p.title.clone(),
+                    r#type: Some("rss".to_string()),
+                    title: Some(p.title.clone()),
+                    html_url: p.link.clone(),
+                    xml_url: Some(p.rss_url.clone()),
+                    ..Default::default()
+                })
+                .collect(),
+        },
+    };
+    std::fs::write(file, opml.to_string().unwrap()).unwrap();
 }
