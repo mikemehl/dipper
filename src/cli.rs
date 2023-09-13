@@ -1,5 +1,6 @@
 use crate::db;
 use crate::feed;
+use crate::tui;
 use clap::{Parser, Subcommand};
 use opml::OPML;
 
@@ -87,6 +88,7 @@ enum Commands {
     Export {
         file: String,
     },
+    Tui,
 }
 
 pub fn parse_args() {
@@ -115,6 +117,7 @@ pub fn parse_args() {
         } => do_search(db_name, term, detailed, episodes, id),
         Commands::Import { file } => do_import(db_name, file),
         Commands::Export { file } => do_export(db_name, file),
+        Commands::Tui => tui::start().unwrap(),
     }
 }
 

@@ -2,6 +2,7 @@ mod cli;
 mod db;
 mod feed;
 mod podcast;
+mod tui;
 
 fn main() {
     cli::parse_args();
