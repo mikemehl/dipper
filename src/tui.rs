@@ -3,10 +3,14 @@ use crossterm::{event, execute, terminal};
 use ratatui::{prelude::*, widgets};
 use std::io;
 
-enum Page {
-    Main { pods: Vec<podcast::Podcast> },
-    Episodes { pod: podcast::Podcast },
-    DetailedEpisode { ep: podcast::Episode },
+trait Page {
+    fn render(&self, f: &mut Frame<CrosstermBackend<io::Stdout>>, rect: Rect);
+}
+
+struct App {
+    podcasts: std::rc::Rc<Vec<podcast::Podcast>>,
+    layout: Layout,
+    podcast_page: PodcastsPage,
 }
 
 pub fn start() -> Result<(), io::Error> {
@@ -16,14 +20,8 @@ pub fn start() -> Result<(), io::Error> {
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
 
-    loop {
-        terminal.draw(render_main_page)?;
-        if let event::Event::Key(key) = event::read().unwrap() {
-            if let event::KeyCode::Char('q') = key.code {
-                break;
-            }
-        }
-    }
+    let app = App::new("test.db".to_string());
+    app.run(&mut terminal);
 
     terminal::disable_raw_mode()?;
     execute!(terminal.backend_mut(), terminal::LeaveAlternateScreen)?;
@@ -32,50 +30,95 @@ pub fn start() -> Result<(), io::Error> {
     Ok(())
 }
 
-fn render(_f: &mut Frame<CrosstermBackend<io::Stdout>>, _page: Page) {
-    todo!("Match on the Page enum and use that to render the current state.");
-}
-
-fn render_title_widget(f: &mut Frame<CrosstermBackend<io::Stdout>>, rect: Rect) {
-    let title = widgets::Block::default()
-        .title("dipper")
-        .title_alignment(Alignment::Center)
-        .title_style(Style::default().yellow())
-        .borders(widgets::Borders::TOP)
-        .border_type(widgets::BorderType::Double);
-
-    f.render_widget(title, rect);
-}
-
-fn render_podcasts_widget(
-    f: &mut Frame<CrosstermBackend<io::Stdout>>,
-    rect: Rect,
-    pods: &Vec<podcast::Podcast>,
-) {
-    let mut items = Vec::new();
-    for pod in pods {
-        items.push(widgets::ListItem::new(pod.title.clone()));
+impl App {
+    fn new(db_name: String) -> App {
+        let conn = db::init_db(&db_name).unwrap();
+        let pods = std::rc::Rc::new(db::fetch_all_podcasts(&conn).unwrap());
+        App {
+            podcasts: pods.clone(),
+            podcast_page: PodcastsPage::new(pods),
+            layout: Layout::default()
+                .direction(Direction::Vertical)
+                .constraints([Constraint::Max(1), Constraint::Min(3), Constraint::Min(0)].as_ref()),
+        }
     }
-    let pods = widgets::List::new(items)
-        .bg(Color::Black)
-        .fg(Color::Cyan)
-        .block(
-            widgets::Block::default()
-                .borders(widgets::Borders::TOP)
-                .title("Podcasts"),
-        );
-    f.render_widget(pods, rect);
+
+    fn run(&self, term: &mut Terminal<CrosstermBackend<io::Stdout>>) {
+        loop {
+            term.draw(|f| self.render(f)).unwrap();
+            if !self.handle_input() {
+                break;
+            }
+        }
+    }
+
+    fn render(&self, f: &mut Frame<CrosstermBackend<io::Stdout>>) {
+        let size = f.size();
+        let rects = self.layout.split(size);
+        self.render_title_widget(f, rects[0]);
+        self.render_tab_widget(f, rects[1]);
+        self.podcast_page.render(f, rects[2]);
+    }
+
+    fn handle_input(&self) -> bool {
+        if let event::Event::Key(key) = event::read().unwrap() {
+            if let event::KeyCode::Char('q') = key.code {
+                return false;
+            }
+        }
+        true
+    }
+
+    fn render_title_widget(&self, f: &mut Frame<CrosstermBackend<io::Stdout>>, rect: Rect) {
+        let title = widgets::Block::default()
+            .title("dipper")
+            .title_alignment(Alignment::Center)
+            .title_style(Style::default().yellow())
+            .borders(widgets::Borders::TOP)
+            .border_type(widgets::BorderType::Double);
+
+        f.render_widget(title, rect);
+    }
+
+    fn render_tab_widget(&self, f: &mut Frame<CrosstermBackend<io::Stdout>>, rect: Rect) {
+        let tabs = widgets::Tabs::new(vec!["Podcasts", "Episodes"])
+            .block(widgets::Block::default().borders(widgets::Borders::ALL))
+            .divider("|")
+            .style(Style::default().fg(Color::Cyan))
+            .highlight_style(Style::default().fg(Color::Yellow))
+            .select(0);
+        f.render_widget(tabs, rect)
+    }
 }
 
-fn render_main_page(f: &mut Frame<CrosstermBackend<io::Stdout>>) {
-    let size = f.size();
-    let layout = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([Constraint::Max(1), Constraint::Min(0)].as_ref())
-        .split(size);
-    render_title_widget(f, layout[0]);
+struct PodcastsPage {
+    pods: std::rc::Rc<Vec<podcast::Podcast>>,
+    state: widgets::ListState,
+}
 
-    let conn = db::init_db(&"test.db".to_string()).unwrap();
-    let pods = db::fetch_all_podcasts(&conn).unwrap();
-    render_podcasts_widget(f, layout[1], &pods);
+impl PodcastsPage {
+    fn new(pods: std::rc::Rc<Vec<podcast::Podcast>>) -> PodcastsPage {
+        PodcastsPage {
+            pods,
+            state: widgets::ListState::default(),
+        }
+    }
+}
+
+impl Page for PodcastsPage {
+    fn render(&self, f: &mut Frame<CrosstermBackend<io::Stdout>>, rect: Rect) {
+        let mut items = Vec::new();
+        for pod in self.pods.iter() {
+            items.push(widgets::ListItem::new(pod.title.clone()));
+        }
+        let pods = widgets::List::new(items)
+            .bg(Color::Black)
+            .fg(Color::Cyan)
+            .block(
+                widgets::Block::default()
+                    .borders(widgets::Borders::TOP)
+                    .title("Podcasts"),
+            );
+        f.render_widget(pods, rect);
+    }
 }
