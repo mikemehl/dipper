@@ -85,6 +85,34 @@ pub fn fetch_all_podcasts(
     Ok(ret)
 }
 
+pub fn fetch_all_podcasts_and_episodes(
+    conn: &rusqlite::Connection,
+) -> Result<Vec<podcast::Podcast>, rusqlite::Error> {
+    let mut ret = Vec::new();
+    let mut pod_stmt = conn.prepare(
+        "SELECT id, title, description, rss_url, link, language, pub_date, last_build_date
+        FROM podcasts",
+    )?;
+    let pods = pod_stmt.query_map(rusqlite::params![], |row| {
+        let episodes = fetch_episodes(conn, row.get(0)?).unwrap();
+        Ok(podcast::Podcast {
+            id: row.get(0)?,
+            title: row.get(1)?,
+            description: row.get(2)?,
+            rss_url: row.get(3)?,
+            link: row.get(4)?,
+            language: row.get(5)?,
+            pub_date: row.get(6)?,
+            last_build_date: row.get(7)?,
+            episodes,
+        })
+    })?;
+    for pod in pods {
+        ret.push(pod?);
+    }
+    Ok(ret)
+}
+
 pub fn fetch_episodes(
     conn: &rusqlite::Connection,
     id: i64,
