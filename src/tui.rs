@@ -39,7 +39,7 @@ impl App {
             podcast_page: PodcastsPage::new(pods),
             layout: Layout::default()
                 .direction(Direction::Vertical)
-                .constraints([Constraint::Max(1), Constraint::Min(3), Constraint::Min(0)].as_ref()),
+                .constraints([Constraint::Min(3), Constraint::Min(0)].as_ref()),
         }
     }
 
@@ -55,9 +55,8 @@ impl App {
     fn render(&self, f: &mut Frame<CrosstermBackend<io::Stdout>>) {
         let size = f.size();
         let rects = self.layout.split(size);
-        self.render_title_widget(f, rects[0]);
-        self.render_tab_widget(f, rects[1]);
-        self.podcast_page.render(f, rects[2]);
+        self.render_tab_widget(f, rects[0]);
+        self.podcast_page.render(f, rects[1]);
     }
 
     fn handle_input(&self) -> bool {
@@ -69,20 +68,15 @@ impl App {
         true
     }
 
-    fn render_title_widget(&self, f: &mut Frame<CrosstermBackend<io::Stdout>>, rect: Rect) {
-        let title = widgets::Block::default()
-            .title("dipper")
-            .title_alignment(Alignment::Center)
-            .title_style(Style::default().yellow())
-            .borders(widgets::Borders::TOP)
-            .border_type(widgets::BorderType::Double);
-
-        f.render_widget(title, rect);
-    }
-
     fn render_tab_widget(&self, f: &mut Frame<CrosstermBackend<io::Stdout>>, rect: Rect) {
         let tabs = widgets::Tabs::new(vec!["Podcasts", "Episodes"])
-            .block(widgets::Block::default().borders(widgets::Borders::ALL))
+            .block(
+                widgets::Block::default()
+                    .borders(widgets::Borders::ALL)
+                    .blue()
+                    .title("dipper")
+                    .title_style(Style::default().fg(Color::Yellow)),
+            )
             .divider("|")
             .style(Style::default().fg(Color::Cyan))
             .highlight_style(Style::default().fg(Color::Yellow))
@@ -111,14 +105,11 @@ impl Page for PodcastsPage {
         for pod in self.pods.iter() {
             items.push(widgets::ListItem::new(pod.title.clone()));
         }
-        let pods = widgets::List::new(items)
-            .bg(Color::Black)
-            .fg(Color::Cyan)
-            .block(
-                widgets::Block::default()
-                    .borders(widgets::Borders::TOP)
-                    .title("Podcasts"),
-            );
+        let pods = widgets::List::new(items).block(
+            widgets::Block::default()
+                .borders(widgets::Borders::TOP)
+                .title("Podcasts"),
+        );
         f.render_widget(pods, rect);
     }
 }
