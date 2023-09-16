@@ -20,6 +20,17 @@ pub fn start() -> Result<(), io::Error> {
     execute!(stdout, terminal::EnterAlternateScreen)?;
     let backend = CrosstermBackend::new(stdout);
     let mut terminal = Terminal::new(backend)?;
+    terminal.draw(|f| {
+        let size = f.size();
+        let loading = widgets::Paragraph::new("Loading...").block(
+            widgets::Block::default()
+                .title("dipper")
+                .borders(widgets::Borders::ALL)
+                .border_style(Style::default().fg(Color::Yellow))
+                .title_style(Style::default().fg(Color::Yellow)),
+        );
+        f.render_widget(loading, size);
+    })?;
 
     let mut app = App::new("test.db".to_string());
     app.run(&mut terminal);
@@ -123,7 +134,7 @@ impl PodcastsPage {
                 .constraints([Constraint::Percentage(33), Constraint::Min(0)].as_ref()),
             hsplit: Layout::default()
                 .direction(Direction::Vertical)
-                .constraints([Constraint::Percentage(50), Constraint::Min(0)].as_ref()),
+                .constraints([Constraint::Percentage(33), Constraint::Min(0)].as_ref()),
             ep_list_state,
             pod_list_focused: true,
         }
