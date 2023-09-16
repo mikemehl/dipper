@@ -2,11 +2,12 @@ use crate::podcast;
 use crate::tui::Page;
 use ratatui::{prelude::*, widgets};
 use std::io;
+use std::rc::Rc;
 use std::vec::Vec;
 
 pub struct EpisodesPage {
     #[allow(dead_code)]
-    eps: Vec<podcast::Episode>,
+    eps: Vec<Rc<podcast::Episode>>,
 }
 
 impl Page for EpisodesPage {
@@ -14,8 +15,14 @@ impl Page for EpisodesPage {
 }
 
 impl EpisodesPage {
-    pub fn new(pods: std::rc::Rc<Vec<podcast::Podcast>>) -> EpisodesPage {
-        let eps = Vec::new();
+    pub fn new(pods: Rc<Vec<podcast::Podcast>>) -> EpisodesPage {
+        let mut eps = Vec::new();
+        for pod in pods.iter() {
+            for ep in pod.episodes.iter() {
+                eps.push(Rc::new(ep.clone()));
+            }
+        }
+        eps.sort_by(|a, b| a.pub_date.cmp(&b.pub_date));
         EpisodesPage { eps }
     }
 }

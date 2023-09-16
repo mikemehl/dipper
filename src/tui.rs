@@ -56,7 +56,7 @@ impl App {
         App {
             podcasts: pods.clone(),
             podcast_page: PodcastsPage::new(pods.clone()),
-            episodes_page: EpisodesPage::new(pods.clone()),
+            episodes_page: EpisodesPage::new(pods),
             layout: Layout::default()
                 .direction(Direction::Vertical)
                 .constraints([Constraint::Min(2), Constraint::Min(0)].as_ref()),

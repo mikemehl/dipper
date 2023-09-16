@@ -47,7 +47,7 @@ impl Podcast {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Episode {
     pub title: String,
     pub guid: String,
@@ -88,7 +88,7 @@ impl Episode {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Enclosure {
     pub url: String,
     pub length: Option<String>,
