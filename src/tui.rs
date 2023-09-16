@@ -1,5 +1,7 @@
+mod episodes_page;
 mod pods_page;
 
+use crate::tui::episodes_page::EpisodesPage;
 use crate::tui::pods_page::PodcastsPage;
 use crate::{db, podcast};
 use crossterm::{event, execute, terminal};
@@ -16,6 +18,7 @@ struct App {
     layout: Layout,
     selected_tab: usize,
     podcast_page: PodcastsPage,
+    episodes_page: episodes_page::EpisodesPage,
 }
 
 pub fn start() -> Result<(), io::Error> {
@@ -49,16 +52,23 @@ pub fn start() -> Result<(), io::Error> {
 
 impl App {
     fn new(db_name: String) -> App {
-        let conn = db::init_db(&db_name).unwrap();
-        let pods = std::rc::Rc::new(db::fetch_all_podcasts_and_episodes(&conn).unwrap());
+        let pods = std::rc::Rc::new(App::load_podcasts(db_name));
         App {
             podcasts: pods.clone(),
             podcast_page: PodcastsPage::new(pods.clone()),
+            episodes_page: EpisodesPage::new(pods.clone()),
             layout: Layout::default()
                 .direction(Direction::Vertical)
                 .constraints([Constraint::Min(2), Constraint::Min(0)].as_ref()),
             selected_tab: 0,
         }
+    }
+
+    fn load_podcasts(db_name: String) -> Vec<podcast::Podcast> {
+        let conn = db::init_db(&db_name).unwrap();
+        let mut pods = db::fetch_all_podcasts_and_episodes(&conn).unwrap();
+        pods.sort_by(|a, b| a.title.cmp(&b.title));
+        pods
     }
 
     fn run(&mut self, term: &mut Terminal<CrosstermBackend<io::Stdout>>) {

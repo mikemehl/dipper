@@ -12,6 +12,16 @@ pub struct PodcastsPage {
     hsplit: Layout,
 }
 
+impl Page for PodcastsPage {
+    fn render(&mut self, f: &mut Frame<CrosstermBackend<io::Stdout>>, rect: Rect) {
+        let vrects = self.vsplit.split(rect);
+        self.render_podcasts_widget(f, vrects[0]);
+        let hrects = self.hsplit.split(vrects[1]);
+        self.render_desc_widget(f, hrects[0]);
+        self.render_episodes_widget(f, hrects[1]);
+    }
+}
+
 impl PodcastsPage {
     pub fn new(pods: std::rc::Rc<Vec<podcast::Podcast>>) -> PodcastsPage {
         let pod_list_state = widgets::ListState::default().with_selected(Some(0));
@@ -160,15 +170,5 @@ impl PodcastsPage {
                     .title_style(self.style_if_focus(true)),
             );
         f.render_stateful_widget(ep_list, rect, &mut self.ep_list_state[selected])
-    }
-}
-
-impl Page for PodcastsPage {
-    fn render(&mut self, f: &mut Frame<CrosstermBackend<io::Stdout>>, rect: Rect) {
-        let vrects = self.vsplit.split(rect);
-        self.render_podcasts_widget(f, vrects[0]);
-        let hrects = self.hsplit.split(vrects[1]);
-        self.render_desc_widget(f, hrects[0]);
-        self.render_episodes_widget(f, hrects[1]);
     }
 }
