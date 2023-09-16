@@ -40,7 +40,7 @@ impl App {
             podcast_page: PodcastsPage::new(pods.clone()),
             layout: Layout::default()
                 .direction(Direction::Vertical)
-                .constraints([Constraint::Min(3), Constraint::Min(0)].as_ref()),
+                .constraints([Constraint::Min(1), Constraint::Min(0)].as_ref()),
         }
     }
 
@@ -70,6 +70,12 @@ impl App {
                 event::KeyCode::Char('k') => {
                     self.podcast_page.select_previous();
                 }
+                event::KeyCode::Char('h') => {
+                    self.podcast_page.focus_pod_list();
+                }
+                event::KeyCode::Char('l') => {
+                    self.podcast_page.focus_ep_list();
+                }
                 _ => (),
             }
         }
@@ -95,43 +101,107 @@ impl App {
 
 struct PodcastsPage {
     pods: std::rc::Rc<Vec<podcast::Podcast>>,
-    state: widgets::ListState,
+    pod_list_state: widgets::ListState,
+    ep_list_state: Vec<widgets::ListState>,
+    pod_list_focused: bool,
     vsplit: Layout,
     hsplit: Layout,
 }
 
 impl PodcastsPage {
     fn new(pods: std::rc::Rc<Vec<podcast::Podcast>>) -> PodcastsPage {
-        let list_state = widgets::ListState::default().with_selected(Some(0));
+        let pod_list_state = widgets::ListState::default().with_selected(Some(0));
+        let mut ep_list_state = Vec::<widgets::ListState>::new();
+        for _ in 0..pods.len() {
+            ep_list_state.push(widgets::ListState::default().with_selected(Some(0)));
+        }
         PodcastsPage {
             pods,
-            state: list_state,
+            pod_list_state,
             vsplit: Layout::default()
                 .direction(Direction::Horizontal)
                 .constraints([Constraint::Percentage(33), Constraint::Min(0)].as_ref()),
             hsplit: Layout::default()
                 .direction(Direction::Vertical)
                 .constraints([Constraint::Percentage(50), Constraint::Min(0)].as_ref()),
+            ep_list_state,
+            pod_list_focused: true,
         }
     }
 
     fn select_next(&mut self) {
-        if let Some(i) = self.state.selected() {
-            if i + 1 < self.pods.len() {
-                self.state.select(Some(i + 1));
-            } else {
-                self.state.select(Some(0));
-            }
+        if self.pod_list_focused {
+            self.select_next_podcast();
+        } else {
+            self.select_next_episode();
         }
     }
 
     fn select_previous(&mut self) {
-        if let Some(i) = self.state.selected() {
-            if i > 0 {
-                self.state.select(Some(i - 1));
+        if self.pod_list_focused {
+            self.select_previous_podcast();
+        } else {
+            self.select_previous_episode();
+        }
+    }
+
+    fn select_next_podcast(&mut self) {
+        if let Some(i) = self.pod_list_state.selected() {
+            if i + 1 < self.pods.len() {
+                self.pod_list_state.select(Some(i + 1));
             } else {
-                self.state.select(Some(self.pods.len() - 1));
+                self.pod_list_state.select(Some(0));
             }
+        }
+    }
+
+    fn select_previous_podcast(&mut self) {
+        if let Some(i) = self.pod_list_state.selected() {
+            if i > 0 {
+                self.pod_list_state.select(Some(i - 1));
+            } else {
+                self.pod_list_state.select(Some(self.pods.len() - 1));
+            }
+        }
+    }
+
+    fn select_next_episode(&mut self) {
+        if let Some(i) = self.pod_list_state.selected() {
+            if let Some(j) = self.ep_list_state[i].selected() {
+                if j + 1 < self.pods[i].episodes.len() {
+                    self.ep_list_state[i].select(Some(j + 1));
+                } else {
+                    self.ep_list_state[i].select(Some(0));
+                }
+            }
+        }
+    }
+
+    fn select_previous_episode(&mut self) {
+        if let Some(i) = self.pod_list_state.selected() {
+            if let Some(j) = self.ep_list_state[i].selected() {
+                if j > 0 {
+                    self.ep_list_state[i].select(Some(j - 1));
+                } else {
+                    self.ep_list_state[i].select(Some(self.pods[i].episodes.len() - 1));
+                }
+            }
+        }
+    }
+
+    fn focus_pod_list(&mut self) {
+        self.pod_list_focused = true;
+    }
+
+    fn focus_ep_list(&mut self) {
+        self.pod_list_focused = false;
+    }
+
+    fn style_if_focus(&self, invert: bool) -> Style {
+        if self.pod_list_focused ^ invert {
+            Style::default().fg(Color::Yellow)
+        } else {
+            Style::default()
         }
     }
 
@@ -141,18 +211,20 @@ impl PodcastsPage {
             items.push(widgets::ListItem::new(pod.title.clone()));
         }
         let pod_list = widgets::List::new(items)
-            .highlight_style(Style::default().fg(Color::Yellow))
+            .highlight_style(self.style_if_focus(false))
             .highlight_symbol(">> ")
             .block(
                 widgets::Block::default()
                     .borders(widgets::Borders::TOP)
-                    .title("Podcasts"),
+                    .border_style(self.style_if_focus(false))
+                    .title("Podcasts")
+                    .title_style(self.style_if_focus(false)),
             );
-        f.render_stateful_widget(pod_list, rect, &mut self.state);
+        f.render_stateful_widget(pod_list, rect, &mut self.pod_list_state);
     }
 
     fn render_desc_widget(&self, f: &mut Frame<CrosstermBackend<io::Stdout>>, rect: Rect) {
-        let selected = self.state.selected().unwrap();
+        let selected = self.pod_list_state.selected().unwrap();
         let desc = widgets::Paragraph::new(self.pods[selected].description.clone())
             .wrap(widgets::Wrap { trim: false })
             .block(
@@ -163,21 +235,23 @@ impl PodcastsPage {
         f.render_widget(desc, rect);
     }
 
-    fn render_episodes_widget(&self, f: &mut Frame<CrosstermBackend<io::Stdout>>, rect: Rect) {
-        let selected = self.state.selected().unwrap();
+    fn render_episodes_widget(&mut self, f: &mut Frame<CrosstermBackend<io::Stdout>>, rect: Rect) {
+        let selected = self.pod_list_state.selected().unwrap();
         let mut items = Vec::new();
         for ep in self.pods[selected].episodes.iter() {
             items.push(widgets::ListItem::new(ep.title.clone()));
         }
         let ep_list = widgets::List::new(items)
-            .highlight_style(Style::default().fg(Color::Yellow))
+            .highlight_style(self.style_if_focus(true))
             .highlight_symbol(">> ")
             .block(
                 widgets::Block::default()
                     .borders(widgets::Borders::TOP)
-                    .title("Episodes"),
+                    .border_style(self.style_if_focus(true))
+                    .title("Episodes")
+                    .title_style(self.style_if_focus(true)),
             );
-        f.render_widget(ep_list, rect);
+        f.render_stateful_widget(ep_list, rect, &mut self.ep_list_state[selected])
     }
 }
 
