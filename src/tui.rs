@@ -18,7 +18,7 @@ struct App {
     layout: Layout,
     selected_tab: usize,
     podcast_page: PodcastsPage,
-    episodes_page: episodes_page::EpisodesPage,
+    episodes_page: EpisodesPage,
 }
 
 pub fn start() -> Result<(), io::Error> {
@@ -56,7 +56,7 @@ impl App {
         App {
             podcasts: pods.clone(),
             podcast_page: PodcastsPage::new(pods.clone()),
-            episodes_page: EpisodesPage::new(pods),
+            episodes_page: EpisodesPage::new(pods.clone()),
             layout: Layout::default()
                 .direction(Direction::Vertical)
                 .constraints([Constraint::Min(2), Constraint::Min(0)].as_ref()),
@@ -84,19 +84,31 @@ impl App {
         let size = f.size();
         let rects = self.layout.split(size);
         self.render_tab_widget(f, rects[0]);
-        self.podcast_page.render(f, rects[1]);
+        match self.selected_tab {
+            0 => {
+                self.podcast_page.render(f, rects[1]);
+            }
+            1 => {
+                self.episodes_page.render(f, rects[1]);
+            }
+            _ => (),
+        }
     }
 
     fn handle_input(&mut self) -> bool {
         if let event::Event::Key(key) = event::read().unwrap() {
             match key.code {
                 event::KeyCode::Char('q') => return false,
-                event::KeyCode::Char('j') => {
-                    self.podcast_page.select_next();
-                }
-                event::KeyCode::Char('k') => {
-                    self.podcast_page.select_previous();
-                }
+                event::KeyCode::Char('j') => match self.selected_tab {
+                    0 => self.podcast_page.select_next(),
+                    1 => self.episodes_page.select_next(),
+                    _ => (),
+                },
+                event::KeyCode::Char('k') => match self.selected_tab {
+                    0 => self.podcast_page.select_previous(),
+                    1 => self.episodes_page.select_previous(),
+                    _ => (),
+                },
                 event::KeyCode::Char('h') => {
                     self.podcast_page.focus_pod_list();
                 }
