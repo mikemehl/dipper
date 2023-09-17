@@ -51,11 +51,27 @@ impl PodcastsPage {
         }
     }
 
+    pub fn page_up(&mut self) {
+        if self.pod_list_focused {
+            self.select_page_up_podcast();
+        } else {
+            self.select_page_up_episode();
+        }
+    }
+
     pub fn select_previous(&mut self) {
         if self.pod_list_focused {
             self.select_previous_podcast();
         } else {
             self.select_previous_episode();
+        }
+    }
+
+    pub fn page_down(&mut self) {
+        if self.pod_list_focused {
+            self.select_page_down_podcast();
+        } else {
+            self.select_page_down_episode();
         }
     }
 
@@ -69,10 +85,30 @@ impl PodcastsPage {
         }
     }
 
+    fn select_page_up_podcast(&mut self) {
+        if let Some(i) = self.pod_list_state.selected() {
+            if i > 10 {
+                self.pod_list_state.select(Some(i - 10));
+            } else {
+                self.pod_list_state.select(Some(0));
+            }
+        }
+    }
+
     fn select_previous_podcast(&mut self) {
         if let Some(i) = self.pod_list_state.selected() {
             if i > 0 {
                 self.pod_list_state.select(Some(i - 1));
+            } else {
+                self.pod_list_state.select(Some(self.pods.len() - 1));
+            }
+        }
+    }
+
+    fn select_page_down_podcast(&mut self) {
+        if let Some(i) = self.pod_list_state.selected() {
+            if i + 10 < self.pods.len() {
+                self.pod_list_state.select(Some(i + 10));
             } else {
                 self.pod_list_state.select(Some(self.pods.len() - 1));
             }
@@ -91,11 +127,35 @@ impl PodcastsPage {
         }
     }
 
+    fn select_page_up_episode(&mut self) {
+        if let Some(i) = self.pod_list_state.selected() {
+            if let Some(j) = self.ep_list_state[i].selected() {
+                if j > 10 {
+                    self.ep_list_state[i].select(Some(j - 10));
+                } else {
+                    self.ep_list_state[i].select(Some(0));
+                }
+            }
+        }
+    }
+
     fn select_previous_episode(&mut self) {
         if let Some(i) = self.pod_list_state.selected() {
             if let Some(j) = self.ep_list_state[i].selected() {
                 if j > 0 {
                     self.ep_list_state[i].select(Some(j - 1));
+                } else {
+                    self.ep_list_state[i].select(Some(self.pods[i].episodes.len() - 1));
+                }
+            }
+        }
+    }
+
+    fn select_page_down_episode(&mut self) {
+        if let Some(i) = self.pod_list_state.selected() {
+            if let Some(j) = self.ep_list_state[i].selected() {
+                if j + 10 < self.pods[i].episodes.len() {
+                    self.ep_list_state[i].select(Some(j + 10));
                 } else {
                     self.ep_list_state[i].select(Some(self.pods[i].episodes.len() - 1));
                 }

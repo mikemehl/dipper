@@ -109,6 +109,16 @@ impl App {
                     1 => self.episodes_page.select_previous(),
                     _ => (),
                 },
+                event::KeyCode::Char('u') => match self.selected_tab {
+                    0 => self.podcast_page.page_up(),
+                    1 => self.episodes_page.page_up(),
+                    _ => (),
+                },
+                event::KeyCode::Char('d') => match self.selected_tab {
+                    0 => self.podcast_page.page_down(),
+                    1 => self.episodes_page.page_down(),
+                    _ => (),
+                },
                 event::KeyCode::Char('h') => {
                     self.podcast_page.focus_pod_list();
                 }

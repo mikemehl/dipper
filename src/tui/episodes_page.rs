@@ -53,10 +53,30 @@ impl EpisodesPage {
         }
     }
 
+    pub fn page_up(&mut self) {
+        if let Some(i) = self.ep_list_state.selected() {
+            if i > 10 {
+                self.ep_list_state.select(Some(i - 10));
+            } else {
+                self.ep_list_state.select(Some(0));
+            }
+        }
+    }
+
     pub fn select_previous(&mut self) {
         if let Some(i) = self.ep_list_state.selected() {
             if i > 0 {
                 self.ep_list_state.select(Some(i - 1));
+            } else {
+                self.ep_list_state.select(Some(self.eps.len() - 1));
+            }
+        }
+    }
+
+    pub fn page_down(&mut self) {
+        if let Some(i) = self.ep_list_state.selected() {
+            if i + 10 < self.eps.len() {
+                self.ep_list_state.select(Some(i + 10));
             } else {
                 self.ep_list_state.select(Some(self.eps.len() - 1));
             }
