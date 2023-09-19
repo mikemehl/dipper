@@ -89,6 +89,9 @@ enum Commands {
         file: String,
     },
     Tui,
+    Play {
+        id: i64,
+    },
 }
 
 pub fn parse_args() {
@@ -118,6 +121,7 @@ pub fn parse_args() {
         Commands::Import { file } => do_import(db_name, file),
         Commands::Export { file } => do_export(db_name, file),
         Commands::Tui => tui::start().unwrap(),
+        Commands::Play { id } => do_play(db_name, id),
     }
 }
 
@@ -280,4 +284,18 @@ fn do_export(db_name: String, file: String) {
         },
     };
     std::fs::write(file, opml.to_string().unwrap()).unwrap();
+}
+
+fn do_play(db_name: String, id: i64) {
+    let conn = db::init_db(&db_name).unwrap();
+    let ep = db::fetch_episode(&conn, id).unwrap();
+    let enclosure = ep.enclosure.unwrap();
+    call_mpv(enclosure);
+}
+
+fn call_mpv(enclosure: crate::podcast::Enclosure) {
+    std::process::Command::new("mpv")
+        .arg(enclosure.url)
+        .status()
+        .unwrap();
 }
