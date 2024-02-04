@@ -38,12 +38,29 @@ impl Podcast {
         }
     }
 
+    pub fn str(&self, detailed: bool) -> String {
+        if !detailed {
+            format!("{} => {}", self.id, self.title)
+        } else {
+            format!("{:?}", self)
+        }
+    }
+
     fn print_summary(&self) {
         println!("{} => {}", self.id, self.title);
     }
 
     fn print_detailed(&self) {
         println!("{:?}", self);
+    }
+}
+
+impl std::fmt::Display for Podcast {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&format!(
+            "{} => {}\nDescription: {}\n",
+            self.id, self.title, self.description
+        ))
     }
 }
 
@@ -79,12 +96,29 @@ impl Episode {
         }
     }
 
+    pub fn str(&self, detailed: bool) -> String {
+        if !detailed {
+            format!("{} => {}", self.id, self.title)
+        } else {
+            format!("{:?}", self)
+        }
+    }
+
     fn print_summary(&self) {
         println!("{} => {}", self.id, self.title);
     }
 
     fn print_detailed(&self) {
         println!("{:?}", self);
+    }
+}
+
+impl std::fmt::Display for Episode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&format!(
+            "{} => {}\nDescription: {}\n",
+            self.id, self.title, self.description
+        ))
     }
 }
 

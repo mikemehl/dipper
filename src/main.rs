@@ -1,3 +1,4 @@
+mod actions;
 mod cli;
 mod db;
 mod feed;

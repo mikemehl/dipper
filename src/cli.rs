@@ -1,3 +1,5 @@
+use crate::actions;
+use crate::actions::Action;
 use crate::db;
 use crate::feed;
 use crate::tui;
@@ -127,84 +129,62 @@ pub fn parse_args() {
 
 fn do_list(db_name: String, id: Option<i64>, detailed: bool, limit: Option<i64>) {
     let conn = db::init_db(&db_name).unwrap();
-    if let Some(id) = id {
-        let pod = db::fetch_podcast_and_episodes(&conn, id).unwrap();
-        pod.print(detailed);
-    } else {
-        let pods = db::fetch_all_podcasts(&conn).unwrap();
-        match limit {
-            Some(limit) => {
-                for pod in pods.iter().take(limit as usize) {
-                    pod.print(detailed);
-                }
-            }
-            None => {
-                for pod in pods {
-                    pod.print(detailed);
-                }
-            }
+    let (tx, rx) = std::sync::mpsc::channel::<String>();
+    let act = actions::List {
+        id,
+        detailed,
+        limit,
+    };
+    let thr = std::thread::spawn(move || {
+        while let Ok(out) = rx.recv() {
+            println!("{}", out);
         }
-    }
+    });
+    act.execute(tx, conn).unwrap();
+    thr.join().unwrap();
 }
 
 fn do_add(db_name: String, url: String) {
     let conn = db::init_db(&db_name).unwrap();
-    let rss = feed::fetch_rss(&url);
-    if rss.is_err() {
-        println!("Error fetching RSS feed: {}.", url);
-        return;
-    }
-    let rss = rss.unwrap();
-    let pod = feed::parse_rss(&url, &rss);
-    if let Ok(mut pod) = pod {
-        db::insert_podcast(&conn, &mut pod).unwrap();
-        println!("Added {}.", pod.title);
-    } else {
-        println!("Error parsing RSS feed: {}.", url);
-    }
+    let act = actions::Add { url };
+    let (tx, rx) = std::sync::mpsc::channel::<String>();
+    let thr = std::thread::spawn(move || {
+        while let Ok(out) = rx.recv() {
+            println!("{}", out);
+        }
+    });
+    act.execute(tx, conn).unwrap();
+    thr.join().unwrap();
 }
 
 fn do_episodes(db_name: String, id: i64, detailed: bool, limit: Option<i64>) {
     let conn = db::init_db(&db_name).unwrap();
-    let pod = db::fetch_podcast_and_episodes(&conn, id).unwrap();
-    match limit {
-        Some(limit) => {
-            for ep in pod.episodes.iter().take(limit as usize) {
-                ep.print(detailed);
-            }
+    let act = actions::Episodes {
+        id,
+        detailed,
+        limit,
+    };
+    let (tx, rx) = std::sync::mpsc::channel::<String>();
+    let thr = std::thread::spawn(move || {
+        while let Ok(out) = rx.recv() {
+            println!("{}", out);
         }
-        None => {
-            for ep in pod.episodes {
-                ep.print(detailed);
-            }
-        }
-    }
+    });
+    act.execute(tx, conn).unwrap();
+    thr.join().unwrap();
 }
 
 fn do_update(db_name: String, id: Option<i64>) {
     let conn = db::init_db(&db_name).unwrap();
-    match id {
-        Some(id) => {
-            let pod = db::fetch_podcast(&conn, id).unwrap();
-            let rss = feed::fetch_rss(&pod.rss_url).unwrap();
-            let pod = feed::parse_rss(&pod.rss_url, &rss).unwrap();
-            for ep in pod.episodes {
-                db::insert_episode(&conn, &ep, id).unwrap();
-            }
-            println!("Updated {}.", pod.title);
+    let act = actions::Update { id };
+    let (tx, rx) = std::sync::mpsc::channel::<String>();
+    let thr = std::thread::spawn(move || {
+        while let Ok(out) = rx.recv() {
+            println!("{}", out);
         }
-        None => {
-            let pods = db::fetch_all_podcasts(&conn).unwrap();
-            for mut pod in pods {
-                let rss = feed::fetch_rss(&pod.rss_url).unwrap();
-                pod = feed::parse_rss(&pod.rss_url, &rss).unwrap();
-                for ep in pod.episodes {
-                    db::insert_episode(&conn, &ep, pod.id).unwrap();
-                }
-                println!("Updated podcast {}.", pod.title);
-            }
-        }
-    }
+    });
+    act.execute(tx, conn).unwrap();
+    thr.join().unwrap();
 }
 
 fn do_remove(db_name: String, id: i64) {
